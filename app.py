@@ -1,159 +1,283 @@
-from flask import Flask, render_template, request, redirect, url_for, g
+from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
 import os
+from werkzeug.utils import secure_filename
+from moo_kratha_db import create_moo_kratha_database
 
 app = Flask(__name__)
+app.secret_key = "mookratha"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'moo_kratha_project.db')
+DATABASE = "moo_kratha_project.db"
 
+UPLOAD_FOLDER = "static/uploads"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DB_PATH)
-        db.row_factory = sqlite3.Row
-    return db
-
-
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+# สร้างโฟลเดอร์ถ้ายังไม่มี
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 def init_db():
-    db = sqlite3.connect(DB_PATH)
-    db.execute('PRAGMA foreign_keys = ON')
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS Categories (
-            category_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_name TEXT NOT NULL UNIQUE,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS Meats (
-            meat_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            meat_name TEXT NOT NULL,
-            category_id INTEGER NOT NULL,
-            price REAL NOT NULL,
-            spiciness_level TEXT,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (category_id) REFERENCES Categories(category_id)
-                ON DELETE RESTRICT
-                ON UPDATE CASCADE
-        )
-    ''')
-    db.commit()
-    db.close()
+    create_moo_kratha_database()
 
 
-@app.route('/')
+# =========================
+# DATABASE CONNECTION
+# =========================
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# =========================
+# HOME
+# =========================
+@app.route("/")
 def home():
-    db = get_db()
-    products = db.execute('''
-        SELECT p.*, c.category_name AS category_name
-        FROM Meats p
-        LEFT JOIN Categories c ON p.category_id = c.category_id
-        ORDER BY p.meat_id DESC
-    ''').fetchall()
-    categories = db.execute('SELECT * FROM Categories ORDER BY category_name').fetchall()
-    return render_template('index.html', page='home', products=products, categories=categories)
+    conn = get_db_connection()
+
+    products = conn.execute("""
+        SELECT Meats.*, Categories.category_name
+        FROM Meats
+        LEFT JOIN Categories
+        ON Meats.category_id = Categories.category_id
+    """).fetchall()
+
+    categories = conn.execute("""
+        SELECT * FROM Categories
+    """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "index.html",
+        page="home",
+        products=products,
+        categories=categories
+    )
 
 
-@app.route('/product/add', methods=['GET', 'POST'])
+# =========================
+# ADD PRODUCT
+# =========================
+@app.route("/product/add", methods=["GET", "POST"])
 def add_product():
-    db = get_db()
-    categories = db.execute('SELECT * FROM Categories ORDER BY category_name').fetchall()
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        price = request.form.get('price', '0').strip() or '0'
-        category_id = request.form.get('category_id')
-        description = request.form.get('description', '').strip()
-        spiciness_level = request.form.get('spiciness_level', '').strip()
-        if name and category_id:
-            db.execute(
-                'INSERT INTO Meats (meat_name, category_id, price, description, spiciness_level) VALUES (?, ?, ?, ?, ?)',
-                (name, int(category_id), float(price), description, spiciness_level)
+
+    conn = get_db_connection()
+    categories = conn.execute(
+        "SELECT * FROM Categories"
+    ).fetchall()
+
+    if request.method == "POST":
+
+        name = request.form["name"]
+        price = request.form["price"]
+        category_id = request.form["category_id"]
+        description = request.form["description"]
+        spiciness_level = request.form["spiciness_level"]
+
+        image_file = request.files["image_file"]
+
+        image_url = ""
+
+        # upload image
+        if image_file and image_file.filename != "":
+            filename = secure_filename(image_file.filename)
+
+            image_path = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                filename
             )
-            db.commit()
-            return redirect(url_for('home'))
-    return render_template('index.html', page='product_form', categories=categories, action='Add', product=None)
+
+            image_file.save(image_path)
+
+            # เก็บแค่ชื่อไฟล์
+            image_url = filename
+
+        conn.execute("""
+            INSERT INTO Meats
+            (
+                meat_name,
+                price,
+                category_id,
+                description,
+                spiciness_level,
+                image_url
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            name,
+            price,
+            category_id,
+            description,
+            spiciness_level,
+            image_url
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("เพิ่มสินค้าสำเร็จ", "success")
+
+        return redirect(url_for("home"))
+
+    conn.close()
+
+    return render_template(
+        "index.html",
+        page="product_form",
+        action="เพิ่ม",
+        product=None,
+        categories=categories
+    )
 
 
-@app.route('/product/edit/<int:product_id>', methods=['GET', 'POST'])
+# =========================
+# EDIT PRODUCT
+# =========================
+@app.route("/product/edit/<int:product_id>", methods=["GET", "POST"])
 def edit_product(product_id):
-    db = get_db()
-    product = db.execute('SELECT * FROM Meats WHERE meat_id = ?', (product_id,)).fetchone()
-    if not product:
-        return redirect(url_for('home'))
-    categories = db.execute('SELECT * FROM Categories ORDER BY category_name').fetchall()
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        price = request.form.get('price', '0').strip() or '0'
-        category_id = request.form.get('category_id')
-        description = request.form.get('description', '').strip()
-        spiciness_level = request.form.get('spiciness_level', '').strip()
-        if name and category_id:
-            db.execute(
-                '''UPDATE Meats SET meat_name = ?, category_id = ?, price = ?, description = ?, spiciness_level = ?
-                   WHERE meat_id = ?''',
-                (name, int(category_id), float(price), description, spiciness_level, product_id)
+
+    conn = get_db_connection()
+
+    product = conn.execute("""
+        SELECT * FROM Meats
+        WHERE meat_id = ?
+    """, (product_id,)).fetchone()
+
+    categories = conn.execute("""
+        SELECT * FROM Categories
+    """).fetchall()
+
+    if request.method == "POST":
+
+        name = request.form["name"]
+        price = request.form["price"]
+        category_id = request.form["category_id"]
+        description = request.form["description"]
+        spiciness_level = request.form["spiciness_level"]
+
+        image_file = request.files["image_file"]
+
+        # ใช้รูปเดิมก่อน
+        image_url = request.form.get("existing_image_url")
+
+        # ถ้ามีอัปโหลดรูปใหม่
+        if image_file and image_file.filename != "":
+
+            filename = secure_filename(image_file.filename)
+
+            image_path = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                filename
             )
-            db.commit()
-            return redirect(url_for('home'))
-    return render_template('index.html', page='product_form', categories=categories, action='Edit', product=product)
+
+            image_file.save(image_path)
+
+            image_url = filename
+
+        conn.execute("""
+            UPDATE Meats
+            SET
+                meat_name = ?,
+                price = ?,
+                category_id = ?,
+                description = ?,
+                spiciness_level = ?,
+                image_url = ?
+            WHERE meat_id = ?
+        """, (
+            name,
+            price,
+            category_id,
+            description,
+            spiciness_level,
+            image_url,
+            product_id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("แก้ไขสินค้าสำเร็จ", "success")
+
+        return redirect(url_for("home"))
+
+    conn.close()
+
+    return render_template(
+        "index.html",
+        page="product_form",
+        action="แก้ไข",
+        product=product,
+        categories=categories
+    )
 
 
-@app.route('/product/delete/<int:product_id>')
+# =========================
+# DELETE PRODUCT
+# =========================
+@app.route("/product/delete/<int:product_id>")
 def delete_product(product_id):
-    db = get_db()
-    db.execute('DELETE FROM Meats WHERE meat_id = ?', (product_id,))
-    db.commit()
-    return redirect(url_for('home'))
+
+    conn = get_db_connection()
+
+    conn.execute("""
+        DELETE FROM Meats
+        WHERE meat_id = ?
+    """, (product_id,))
+
+    conn.commit()
+    conn.close()
+
+    flash("ลบสินค้าสำเร็จ", "success")
+
+    return redirect(url_for("home"))
 
 
-@app.route('/category/add', methods=['GET', 'POST'])
+# =========================
+# ADD CATEGORY
+# =========================
+@app.route("/category/add", methods=["GET", "POST"])
 def add_category():
-    db = get_db()
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        description = request.form.get('description', '').strip()
-        if name:
-            db.execute('INSERT OR IGNORE INTO Categories (category_name, description) VALUES (?, ?)', (name, description))
-            db.commit()
-            return redirect(url_for('home'))
-    return render_template('index.html', page='category_form', action='Add', category=None)
+
+    if request.method == "POST":
+
+        name = request.form["name"]
+        description = request.form["description"]
+
+        conn = get_db_connection()
+
+        conn.execute("""
+            INSERT INTO Categories
+            (
+                category_name,
+                description
+            )
+            VALUES (?, ?)
+        """, (
+            name,
+            description
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("เพิ่มหมวดหมู่สำเร็จ", "success")
+
+        return redirect(url_for("home"))
+
+    return render_template(
+        "index.html",
+        page="category_form",
+        action="เพิ่ม",
+        category=None
+    )
 
 
-@app.route('/category/edit/<int:category_id>', methods=['GET', 'POST'])
-def edit_category(category_id):
-    db = get_db()
-    category = db.execute('SELECT * FROM Categories WHERE category_id = ?', (category_id,)).fetchone()
-    if not category:
-        return redirect(url_for('home'))
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        description = request.form.get('description', '').strip()
-        if name:
-            db.execute('UPDATE Categories SET category_name = ?, description = ? WHERE category_id = ?', (name, description, category_id))
-            db.commit()
-            return redirect(url_for('home'))
-    return render_template('index.html', page='category_form', action='Edit', category=category)
-
-
-@app.route('/category/delete/<int:category_id>')
-def delete_category(category_id):
-    db = get_db()
-    db.execute('DELETE FROM Categories WHERE category_id = ?', (category_id,))
-    db.commit()
-    return redirect(url_for('home'))
-
-
-if __name__ == '__main__':
+# =========================
+# RUN APP
+# =========================
+if __name__ == "__main__":
     init_db()
     app.run(debug=True)
