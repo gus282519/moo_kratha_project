@@ -1,150 +1,468 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MooKratha Management</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    body { background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); }
-    .card-shadow { box-shadow: 0 20px 35px rgba(220, 38, 38, .08); }
+    body {
+      background: linear-gradient(180deg, #fff5f5 0%, #ffffff 100%);
+    }
+
+    .card-shadow {
+      box-shadow: 0 20px 35px rgba(220, 38, 38, .08);
+    }
   </style>
 </head>
+
 <body class="min-h-screen text-gray-900">
+
   <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+    <!-- FLASH MESSAGE -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="mb-4 rounded-3xl border p-4
+            {% if category == 'error' %}
+              border-red-200 bg-red-50 text-red-700
+            {% else %}
+              border-green-200 bg-green-50 text-green-700
+            {% endif %}
+          ">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- HEADER -->
     <header class="mb-10 rounded-3xl border border-red-200 bg-white/90 p-6 shadow-lg text-center">
+
       <div class="inline-flex items-center gap-3 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-700">
         <span>ร้านมูกระทะ</span>
       </div>
-      <h1 class="mt-4 text-4xl font-extrabold tracking-tight text-red-900">ระบบจัดการ MooKratha</h1>
-      <p class="mx-auto mt-3 max-w-2xl text-sm text-gray-600 sm:text-base">เพิ่ม แก้ไข แสดง และลบ สินค้าและหมวดหมู่ พร้อมออกแบบให้รองรับมือถือ</p>
+
+      <h1 class="mt-4 text-4xl font-extrabold tracking-tight text-red-900">
+        ระบบจัดการ MooKratha
+      </h1>
+
       <div class="mt-6 flex flex-wrap justify-center gap-3">
-        <a href="/product/add" class="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-red-700">เพิ่มสินค้า</a>
-        <a href="/category/add" class="rounded-full border border-red-600 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-50">เพิ่มหมวดหมู่</a>
+        <a href="/product/add"
+          class="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-red-700">
+          เพิ่มสินค้า
+        </a>
+
+        <a href="/category/add"
+          class="rounded-full border border-red-600 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-50">
+          เพิ่มหมวดหมู่
+        </a>
       </div>
+
     </header>
 
+    <!-- HOME PAGE -->
     {% if page == 'home' %}
+
       <section class="mb-10">
+
         <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+
           <div>
-            <h2 class="text-2xl font-bold text-red-900">สินค้า MooKratha</h2>
-            <p class="mt-1 text-sm text-gray-600">ดูรายการสินค้าและหมวดหมู่ทั้งหมดในระบบ</p>
+            <h2 class="text-2xl font-bold text-red-900">
+              สินค้า MooKratha
+            </h2>
+
+            <p class="mt-1 text-sm text-gray-600">
+              ดูรายการสินค้าและหมวดหมู่ทั้งหมดในระบบ
+            </p>
           </div>
+
           <div class="rounded-3xl bg-white px-4 py-4 shadow card-shadow sm:px-6">
-            <p class="text-sm text-gray-500">หมวดหมู่ทั้งหมด</p>
+
+            <p class="text-sm text-gray-500">
+              หมวดหมู่ทั้งหมด
+            </p>
+
             <div class="mt-3 flex flex-wrap gap-2">
+
               {% for cat in categories %}
-                <span class="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700">{{ cat.category_name }}</span>
+                <span class="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700">
+                  {{ cat.category_name }}
+                </span>
               {% else %}
-                <span class="text-sm text-gray-500">ยังไม่มีหมวดหมู่</span>
+                <span class="text-sm text-gray-500">
+                  ยังไม่มีหมวดหมู่
+                </span>
               {% endfor %}
+
             </div>
           </div>
         </div>
+
       </section>
 
+      <!-- PRODUCT GRID -->
       <section class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+
         {% for product in products %}
+
           <article class="overflow-hidden rounded-3xl border border-red-100 bg-white p-5 shadow card-shadow">
+
             <div class="space-y-4">
+
+              <!-- IMAGE -->
               <div class="aspect-[4/3] overflow-hidden rounded-3xl bg-red-50">
-                <div class="flex h-full items-center justify-center text-red-200">ไม่มีรูปภาพ</div>
-              </div>
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-red-600">{{ product.category_name or 'ไม่มีหมวดหมู่' }}</p>
-                <h3 class="mt-3 text-xl font-semibold text-red-900">{{ product.meat_name }}</h3>
-                <p class="mt-2 text-sm leading-6 text-gray-600">{{ product.description or 'คำอธิบายสินค้า...' }}</p>
-                {% if product.spiciness_level %}
-                  <p class="mt-1 text-xs text-red-700">ระดับความเผ็ด: {{ product.spiciness_level }}</p>
+
+                {% if product.image_url %}
+
+                  <img
+                    src="{{ url_for('static', filename='uploads/' + product.image_url) }}"
+                    alt="{{ product.meat_name }}"
+                    class="h-full w-full object-cover"
+                  />
+
+                {% else %}
+
+                  <div class="flex h-full items-center justify-center text-red-200">
+                    ไม่มีรูปภาพ
+                  </div>
+
                 {% endif %}
+
               </div>
+
+              <!-- CONTENT -->
+              <div>
+
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-red-600">
+                  {{ product.category_name or 'ไม่มีหมวดหมู่' }}
+                </p>
+
+                <h3 class="mt-3 text-xl font-semibold text-red-900">
+                  {{ product.meat_name }}
+                </h3>
+
+                <p class="mt-2 text-sm leading-6 text-gray-600">
+                  {{ product.description or 'คำอธิบายสินค้า...' }}
+                </p>
+
+                {% if product.spiciness_level %}
+                  <p class="mt-1 text-xs text-red-700">
+                    ระดับความเผ็ด: {{ product.spiciness_level }}
+                  </p>
+                {% endif %}
+
+              </div>
+
+              <!-- PRICE -->
               <div class="flex items-center justify-between gap-4">
-                <span class="text-xl font-bold text-red-700">฿{{ '%.2f'|format(product.price) }}</span>
+
+                <span class="text-xl font-bold text-red-700">
+                  ฿{{ '%.2f'|format(product.price) }}
+                </span>
+
                 <div class="flex items-center gap-2">
-                  <a href="/product/edit/{{ product.meat_id }}" class="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700">แก้ไข</a>
-                  <a href="/product/delete/{{ product.meat_id }}" class="rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">ลบ</a>
+
+                  <a
+                    href="{{ url_for('edit_product', product_id=product['meat_id']) }}"
+                    class="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700"
+                  >
+                    แก้ไข
+                  </a>
+
+                  <a
+                    href="{{ url_for('delete_product', product_id=product['meat_id']) }}"
+                    class="rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    ลบ
+                  </a>
+
                 </div>
+
               </div>
+
             </div>
+
           </article>
+
         {% else %}
+
           <div class="col-span-full rounded-3xl border border-red-200 bg-white p-8 text-center text-red-700 shadow card-shadow">
-            <p class="text-lg font-semibold">ยังไม่มีสินค้าในระบบ</p>
-            <p class="mt-2 text-sm text-gray-600">เพิ่มสินค้าใหม่หรือหมวดหมู่ก่อนเพื่อเริ่มต้นใช้งาน</p>
+
+            <p class="text-lg font-semibold">
+              ยังไม่มีสินค้าในระบบ
+            </p>
+
+            <p class="mt-2 text-sm text-gray-600">
+              เพิ่มสินค้าใหม่หรือหมวดหมู่ก่อนเพื่อเริ่มต้นใช้งาน
+            </p>
+
           </div>
+
         {% endfor %}
+
       </section>
+
     {% elif page == 'product_form' %}
+
+      <!-- PRODUCT FORM -->
       <section class="mx-auto max-w-3xl rounded-3xl border border-red-100 bg-white p-8 shadow card-shadow">
+
         <div class="flex items-center justify-between gap-4">
+
           <div>
-            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-red-600">ฟอร์มสินค้า</p>
-            <h2 class="mt-3 text-3xl font-bold text-red-900">{{ action }} สินค้า</h2>
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-red-600">
+              ฟอร์มสินค้า
+            </p>
+
+            <h2 class="mt-3 text-3xl font-bold text-red-900">
+              {{ action }} สินค้า
+            </h2>
           </div>
-          <a href="/" class="rounded-full border border-red-600 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">กลับหน้าหลัก</a>
+
+          <a href="/"
+            class="rounded-full border border-red-600 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
+            กลับหน้าหลัก
+          </a>
+
         </div>
-        <form method="POST" class="mt-8 space-y-6">
+
+        <!-- FORM -->
+        <form
+          method="POST"
+          enctype="multipart/form-data"
+          action="{{ url_for('edit_product', product_id=product['meat_id']) if product else url_for('add_product') }}"
+          class="mt-8 space-y-6"
+        >
+
           <div class="grid gap-6 sm:grid-cols-2">
+
             <label class="block">
-              <span class="text-sm font-medium text-gray-700">ชื่อสินค้า</span>
-              <input name="name" value="{{ product.meat_name if product else '' }}" required class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500" />
+
+              <span class="text-sm font-medium text-gray-700">
+                ชื่อสินค้า
+              </span>
+
+              <input
+                name="name"
+                value="{{ product.meat_name if product else '' }}"
+                required
+                class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+              />
+
             </label>
+
             <label class="block">
-              <span class="text-sm font-medium text-gray-700">ราคา (บาท)</span>
-              <input name="price" type="number" step="0.01" value="{{ product.price if product else '' }}" required class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500" />
+
+              <span class="text-sm font-medium text-gray-700">
+                ราคา (บาท)
+              </span>
+
+              <input
+                name="price"
+                type="number"
+                step="0.01"
+                value="{{ product.price if product else '' }}"
+                required
+                class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+              />
+
             </label>
+
           </div>
-          <div class="grid gap-6 sm:grid-cols-2">
+
+          <div class="grid gap-6 sm:grid-cols-3">
+
+            <!-- CATEGORY -->
             <label class="block">
-              <span class="text-sm font-medium text-gray-700">หมวดหมู่</span>
-              <select name="category_id" class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500">
-                <option value="">เลือกหมวดหมู่</option>
+
+              <span class="text-sm font-medium text-gray-700">
+                หมวดหมู่
+              </span>
+
+              <select
+                name="category_id"
+                class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+              >
+
+                <option value="">
+                  เลือกหมวดหมู่
+                </option>
+
                 {% for cat in categories %}
-                  <option value="{{ cat.category_id }}" {% if product and product.category_id == cat.category_id %}selected{% endif %}>{{ cat.category_name }}</option>
+
+                  <option
+                    value="{{ cat.category_id }}"
+                    {% if product and product.category_id == cat.category_id %}
+                      selected
+                    {% endif %}
+                  >
+                    {{ cat.category_name }}
+                  </option>
+
                 {% endfor %}
+
               </select>
+
             </label>
+
+            <!-- SPICY -->
             <label class="block">
-              <span class="text-sm font-medium text-gray-700">ระดับความเผ็ด</span>
-              <input name="spiciness_level" value="{{ product.spiciness_level if product else '' }}" class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500" />
+
+              <span class="text-sm font-medium text-gray-700">
+                ระดับความเผ็ด
+              </span>
+
+              <input
+                name="spiciness_level"
+                value="{{ product.spiciness_level if product else '' }}"
+                class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+              />
+
             </label>
+
+            <!-- IMAGE -->
+            <label class="block">
+
+              <span class="text-sm font-medium text-gray-700">
+                รูปภาพ
+              </span>
+
+              <input
+                type="hidden"
+                name="existing_image_url"
+                value="{{ product.image_url if product else '' }}"
+              />
+
+              <input
+                name="image_file"
+                type="file"
+                accept="image/*"
+                class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+              />
+
+            </label>
+
           </div>
+
+          <!-- DESCRIPTION -->
           <label class="block">
-            <span class="text-sm font-medium text-gray-700">คำอธิบาย</span>
-            <textarea name="description" rows="4" class="mt-2 w-full rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500">{{ product.description if product else '' }}</textarea>
+
+            <span class="text-sm font-medium text-gray-700">
+              คำอธิบาย
+            </span>
+
+            <textarea
+              name="description"
+              rows="4"
+              class="mt-2 w-full rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+            >{{ product.description if product else '' }}</textarea>
+
           </label>
+
+          <!-- BUTTON -->
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <a href="/" class="rounded-full border border-red-600 bg-red-50 px-6 py-3 text-sm font-semibold text-red-700 hover:bg-red-100">กลับหน้าหลัก</a>
-            <button type="submit" class="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-red-700">{{ action }} สินค้า</button>
+
+            <a href="/"
+              class="rounded-full border border-red-600 bg-red-50 px-6 py-3 text-sm font-semibold text-red-700 hover:bg-red-100">
+              กลับหน้าหลัก
+            </a>
+
+            <button
+              type="submit"
+              class="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-red-700"
+            >
+              {{ action }} สินค้า
+            </button>
+
           </div>
+
         </form>
+
       </section>
+
     {% elif page == 'category_form' %}
+
+      <!-- CATEGORY FORM -->
       <section class="mx-auto max-w-2xl rounded-3xl border border-red-100 bg-white p-8 shadow card-shadow">
+
         <div class="flex items-center justify-between gap-4">
+
           <div>
-            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-red-600">ฟอร์มหมวดหมู่</p>
-            <h2 class="mt-3 text-3xl font-bold text-red-900">{{ action }} หมวดหมู่</h2>
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-red-600">
+              ฟอร์มหมวดหมู่
+            </p>
+
+            <h2 class="mt-3 text-3xl font-bold text-red-900">
+              {{ action }} หมวดหมู่
+            </h2>
           </div>
-          <a href="/" class="rounded-full border border-red-600 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">กลับหน้าหลัก</a>
+
+          <a href="/"
+            class="rounded-full border border-red-600 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
+            กลับหน้าหลัก
+          </a>
+
         </div>
+
         <form method="POST" class="mt-8 space-y-6">
+
           <label class="block">
-            <span class="text-sm font-medium text-gray-700">ชื่อหมวดหมู่</span>
-            <input name="name" value="{{ category.category_name if category else '' }}" required class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500" />
+
+            <span class="text-sm font-medium text-gray-700">
+              ชื่อหมวดหมู่
+            </span>
+
+            <input
+              name="name"
+              value="{{ category.category_name if category else '' }}"
+              required
+              class="mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+            />
+
           </label>
+
           <label class="block">
-            <span class="text-sm font-medium text-gray-700">คำอธิบาย</span>
-            <textarea name="description" rows="3" class="mt-2 w-full rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500">{{ category.description if category else '' }}</textarea>
+
+            <span class="text-sm font-medium text-gray-700">
+              คำอธิบาย
+            </span>
+
+            <textarea
+              name="description"
+              rows="3"
+              class="mt-2 w-full rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-500"
+            >{{ category.description if category else '' }}</textarea>
+
           </label>
+
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <a href="/" class="rounded-full border border-red-600 bg-red-50 px-6 py-3 text-sm font-semibold text-red-700 hover:bg-red-100">กลับหน้าหลัก</a>
-            <button type="submit" class="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-red-700">{{ action }} หมวดหมู่</button>
+
+            <a href="/"
+              class="rounded-full border border-red-600 bg-red-50 px-6 py-3 text-sm font-semibold text-red-700 hover:bg-red-100">
+              กลับหน้าหลัก
+            </a>
+
+            <button
+              type="submit"
+              class="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-red-700"
+            >
+              {{ action }} หมวดหมู่
+            </button>
+
           </div>
+
         </form>
+
       </section>
+
     {% endif %}
+
   </div>
+
 </body>
 </html>
